@@ -21,7 +21,7 @@ class PresignedTest extends TestCase
         'region' => 'ap-northeast-1',
         'version' => 'latest',
         'bucket' => 'bucket',
-        'prefix' => 'prefix',
+        'prefix' => 'prefix/',
         'options' => [
             'foo' => 'bar'
         ]
@@ -29,14 +29,14 @@ class PresignedTest extends TestCase
 
     protected function setUp()
     {
-        // 
+        parent::setUp();
     }
 
     public function testCheckOptions()
     {
         $options = [
             'bucket' => 'bucket',
-            'prefix' => 'prefix',
+            'prefix' => 'prefix/',
             'options' => [
                 'foo' => 'bar'
             ]
@@ -45,19 +45,44 @@ class PresignedTest extends TestCase
         $s3Presigned = $this->getS3Presigned($options);
     }
 
-    public function testSetBaseUri()
+    public function testSetPrefix()
     {
         $s3Presigned = $this->getS3Presigned();
         $bucket = $this->configs['bucket'];
         $prefix = $this->configs['prefix'];
-        $baseUri = "https://s3-{$this->configs['region']}.amazonaws.com/{$bucket}/{$prefix}/";
-        $this->assertEquals($baseUri, $s3Presigned->getBaseUri());
+        $region = $this->configs['region'];
+        $baseUri = "https://{$bucket}.s3-{$region}.amazonaws.com/{$prefix}";
+        $this->assertEquals($baseUri, $s3Presigned->getPrefixedUri());
     }
 
     public function testGetClient()
     {
         $s3Presigned = $this->getS3Presigned();
         $this->assertInstanceOf(S3Client::class, $s3Presigned->getClient());
+    }
+
+    public function testGetSimpleUploadUrl()
+    {
+        $filename = 'filename.extension';
+        $host = 'bucket.s3-ap-northeast-1.amazonaws.com';
+        $path = "/prefix/{$filename}";
+        $s3Presigned = $this->getS3Presigned();
+        $result = $s3Presigned->getSimpleUploadUrl($filename, 10, [], true);
+        $this->assertEquals($host, $result->getHost());
+        $this->assertEquals($path, $result->getPath());
+    }
+
+    public function testGetUploadForm()
+    {
+        $filename = 'filename.extension';
+        $policies = [];
+        $defaults = ['foo' => 'bar'];
+        $s3Presigned = $this->getS3Presigned();
+        $result = $s3Presigned->getUploadForm($filename, 10, $policies, $defaults);
+        $this->assertArrayHasKey('endpoint', $result);
+        $this->assertArrayHasKey('inputs', $result);
+        $this->assertEquals($result['endpoint'], $s3Presigned->getBaseUri());
+        $this->assertEquals($result['inputs']['foo'], 'bar');
     }
 
     private function getS3Presigned($options = [])

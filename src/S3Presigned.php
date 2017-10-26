@@ -5,7 +5,6 @@ namespace Unisharp\S3\Presigned;
 use Aws\S3\S3Client;
 use Aws\S3\PostObjectV4;
 use Unisharp\S3\Presigned\Exceptions\OptionsMissingException;
-// use Exception;
 
 class S3Presigned
 {
@@ -21,46 +20,48 @@ class S3Presigned
         $this->bucket = $bucket;
         $this->options = $options;
         $this->checkOptions();
-        $this->setBaseUri($prefix);
+        $this->setBaseUri();
+        $this->setPrefix($prefix);
     }
 
-    public function getUrl($minutes = 5)
+    public function getSimpleUploadUrl($key, $minutes = 10, array $options = [], $guzzle = false)
     {
         // http://docs.aws.amazon.com/aws-sdk-php/v3/api/api-s3-2006-03-01.html#putobject
         // http://docs.aws.amazon.com/AmazonS3/latest/API/sigv4-query-string-auth.html
-        $cmd = $this->client->getCommand('PutObject', [
+        $defaults = [
             'Bucket' => $this->bucket,
-            'Key' => $this->getPrefix() . uniqid() . '.jpg',
+            'Key' => $this->getPrefix() . $key,
             'ACL' => 'public-read'
-        ]);
+        ];
+        $options = $options ? array_merge($defaults, $options) : $defaults;
+        $cmd = $this->client->getCommand('PutObject', $options);
         $request = $this->client
             ->createPresignedRequest($cmd, "+{$minutes} minutes");
+        $result = $request->getUri();
 
-        return (string) $request->getUri();
+        return $guzzle ? $result : (string) $result;
     }
 
-    public function getFields($minutes = 5)
+    public function getUploadForm($key, $minutes = 10, array $policies = [], array $defaults = [])
     {
         // https://aws.amazon.com/tw/articles/browser-uploads-to-s3-using-html-post-forms/
         // http://docs.aws.amazon.com/AmazonS3/latest/API/sigv4-post-example.html
-        $key = $this->getPrefix() . uniqid();
-        $defaults = [
-            'acl' => 'public-read',
-            'key' => $key . '-${filename}',
-            // 'Content-Type' => '',
-            // 'file' => ''
+        $overrides = [
+            'key' => $this->getPrefix() . '${filename}'
         ];
-        $options = [
+        $defaults = $defaults ? array_merge($overrides, $defaults) : $overrides;
+        $defaultPolicies = [
             ['acl' => 'public-read'],
             ['bucket' => $this->bucket],
-            ['starts-with', '$key', $key],
-            ['content-length-range', 0, 5242895],
-            ['starts-with', '$Content-Type', 'image/'],
-            // ['content-type-starts-with' => 'image/'],
+            ['starts-with', '$key', $this->getPrefix()]
         ];
-        $postObject = $this->getPostObject($defaults, $options, $minutes);
+        $policies = $policies ? array_merge($defaultPolicies, $defaults) : $defaultPolicies;
+        $postObject = $this->getPostObject($defaults, $policies, $minutes);
 
-        return $postObject->getFormInputs();
+        return [
+            'endpoint' => $this->getBaseUri(),
+            'inputs' => $postObject->getFormInputs()
+        ];
     }
 
     public function listObjects()
@@ -116,17 +117,6 @@ class S3Presigned
         );
     }
 
-    public function getPrefix()
-    {
-        $userId = auth()->user() ? auth()->user()->id : 'public';
-        $prefix = 'users/' . $userId . '/';
-        if (!empty($this->prefix)) {
-            $prefix = $this->prefix . '/' . $prefix;
-        }
-
-        return $prefix;
-    }
-
     public function checkOptions()
     {
         $missings = array_filter($this->requiredOptions, function ($value) {
@@ -138,18 +128,34 @@ class S3Presigned
         }
     }
 
-    public function setBaseUri($prefix = '')
+    public function setBaseUri()
     {
-        $baseUri = "https://s3-{$this->options['region']}.amazonaws.com/{$this->bucket}/";
-        if (!empty($prefix)) {
-            $baseUri .= "{$prefix}/";
-        }
+        $baseUri = "https://{$this->bucket}.s3-{$this->options['region']}.amazonaws.com/";
         $this->baseUri = $baseUri;
+
+        return $this;
     }
 
     public function getBaseUri()
     {
         return $this->baseUri;
+    }
+
+    public function getPrefixedUri()
+    {
+        return $this->getBaseUri() . $this->getPrefix();
+    }
+
+    public function setPrefix($prefix = '')
+    {
+        $this->prefix = $prefix;
+
+        return $this;
+    }
+
+    public function getPrefix()
+    {
+        return $this->prefix;
     }
 
     public function getClient()
