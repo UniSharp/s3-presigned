@@ -29,7 +29,7 @@ class S3Presigned
         // http://docs.aws.amazon.com/aws-sdk-php/v3/api/api-s3-2006-03-01.html#putobject
         // http://docs.aws.amazon.com/AmazonS3/latest/API/sigv4-query-string-auth.html
         $defaults = [
-            'Bucket' => $this->bucket,
+            'Bucket' => $this->getBucket(),
             'Key' => $this->getPrefix() . $key,
             'ACL' => 'public-read'
         ];
@@ -52,7 +52,7 @@ class S3Presigned
         $defaults = $defaults ? array_merge($overrides, $defaults) : $overrides;
         $defaultPolicies = [
             ['acl' => 'public-read'],
-            ['bucket' => $this->bucket],
+            ['bucket' => $this->getBucket()],
             ['starts-with', '$key', $this->getPrefix()]
         ];
         $policies = $policies ? array_merge($defaultPolicies, $defaults) : $defaultPolicies;
@@ -70,7 +70,7 @@ class S3Presigned
         // http://docs.aws.amazon.com/aws-sdk-php/v3/api/api-s3-2006-03-01.html#listobjects
         // https://github.com/thephpleague/flysystem-aws-s3-v3/blob/master/src/AwsS3Adapter.php
         $resultPaginator = $this->client->getPaginator('ListObjects', [
-            'Bucket' => $this->bucket,
+            'Bucket' => $this->getBucket(),
             'Prefix' => $this->getPrefix()
         ]);
 
@@ -91,7 +91,7 @@ class S3Presigned
     public function deleteObject($key)
     {
         return $this->client->deleteObject([
-            'Bucket' => $this->bucket,
+            'Bucket' => $this->getBucket(),
             'Key'    => $key
         ]);
     }
@@ -109,8 +109,8 @@ class S3Presigned
     private function getPostObject(array $defaults, array $options, $minutes = 10)
     {
         return new PostObjectV4(
-            $this->client,
-            env('AWS_S3_BUCKET'),
+            $this->getClient(),
+            $this->getBucket(),
             $defaults,
             $options,
             "+{$minutes} minutes"
@@ -146,7 +146,7 @@ class S3Presigned
         return $this->getBaseUri() . $this->getPrefix();
     }
 
-    public function setPrefix($prefix = '')
+    public function setPrefix($prefix)
     {
         $this->prefix = $prefix;
 
@@ -156,6 +156,18 @@ class S3Presigned
     public function getPrefix()
     {
         return $this->prefix;
+    }
+
+    public function setBucket($bucket)
+    {
+        $this->bucket = $bucket;
+
+        return $this;
+    }
+
+    public function getBucket()
+    {
+        return $this->bucket;
     }
 
     public function getClient()
