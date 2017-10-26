@@ -4,21 +4,24 @@ namespace Unisharp\S3\Presigned;
 
 use Aws\S3\S3Client;
 use Aws\S3\PostObjectV4;
-use Exception;
+use Unisharp\S3\Presigned\Exceptions\OptionsMissingException;
+// use Exception;
 
 class S3Presigned
 {
     protected $client;
-    protected $bucket;
+    protected $options;
+    protected $requiredOptions = ['region'];
     protected $baseUri;
     protected $prefix;
 
-    public function __construct(S3Client $client, $bucket = null, $prefix = null)
+    public function __construct(S3Client $client, $bucket, $prefix = '', array $options = [])
     {
         $this->client = $client;
-        $this->bucket = $bucket ?: env('AWS_S3_BUCKET');
-        $this->prefix = $prefix;
-        $this->initBaseUri();
+        $this->bucket = $bucket;
+        $this->options = $options;
+        $this->checkOptions();
+        $this->setBaseUri($prefix);
     }
 
     public function getUrl($minutes = 5)
@@ -113,12 +116,7 @@ class S3Presigned
         );
     }
 
-    private function initBaseUri()
-    {
-        $this->baseUri = 'https://s3-' . env('AWS_S3_REGION') . ".amazonaws.com/{$this->bucket}/";
-    }
-
-    private function getPrefix()
+    public function getPrefix()
     {
         $userId = auth()->user() ? auth()->user()->id : 'public';
         $prefix = 'users/' . $userId . '/';
@@ -127,5 +125,35 @@ class S3Presigned
         }
 
         return $prefix;
+    }
+
+    public function checkOptions()
+    {
+        $missings = array_filter($this->requiredOptions, function ($value) {
+            return !array_key_exists($value, $this->options);
+        });
+        if (count($missings)) {
+            $fields = implode(', ', $missings);
+            throw new OptionsMissingException("`{$fields}` field(s) is required in options");
+        }
+    }
+
+    public function setBaseUri($prefix = '')
+    {
+        $baseUri = "https://s3-{$this->options['region']}.amazonaws.com/{$this->bucket}/";
+        if (!empty($prefix)) {
+            $baseUri .= "{$prefix}/";
+        }
+        $this->baseUri = $baseUri;
+    }
+
+    public function getBaseUri()
+    {
+        return $this->baseUri;
+    }
+
+    public function getClient()
+    {
+        return $this->client;
     }
 }

@@ -3,9 +3,14 @@
 namespace Unisharp\S3\Presigned;
 
 use Illuminate\Support\ServiceProvider;
+use Aws\Credentials\Credentials;
+use Aws\S3\S3Client;
+use Unisharp\S3\Presigned\S3Presigned;
 
 class S3PresignedServiceProvider extends ServiceProvider
 {
+    protected $configs;
+
     /**
      * Boot the services for the application.
      *
@@ -14,6 +19,7 @@ class S3PresignedServiceProvider extends ServiceProvider
     public function boot()
     {
         $this->bootConfig();
+        $this->loadConfig();
     }
 
     /**
@@ -23,8 +29,22 @@ class S3PresignedServiceProvider extends ServiceProvider
      */
     public function register()
     {
-        $this->app->singleton('s3_presigned', function ($app) {
-            //
+        $configs = $this->configs;
+        $credentials = new Credentials(
+            $configs['credentials']['access_key'],
+            $configs['credentials']['secret_key'],
+        );
+        $s3Client = new S3Client([
+            'region'  => $configs['region'],
+            'version' => $configs['version']
+            'credentials' => $credentials,
+            'options' => [
+                $configs['options']
+            ]
+        ]);
+
+        $this->app->singleton('s3.presigned', function ($app) use ($s3Client, $configs) {
+            return new S3Presigned($s3Client, $configs['bucket'], $configs['prefix'], $configs)
         });
     }
 
@@ -43,12 +63,22 @@ class S3PresignedServiceProvider extends ServiceProvider
     }
 
     /**
+     * Load configure.
+     *
+     * @return void
+     */
+    protected function loadConfig($configs = [])
+    {
+        $this->configs = $configs ?: config('s3_presigned');
+    }
+
+    /**
      * Get the services provided by the provider.
      *
      * @return array
      */
     public function provides()
     {
-        return ['s3_presigned'];
+        return ['s3.presigned'];
     }
 }
