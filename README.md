@@ -7,5 +7,5 @@ Installation
 ===
 
 ```
-composer install unisharp/s3-presigned
+composer require unisharp/s3-presigned
 ```
