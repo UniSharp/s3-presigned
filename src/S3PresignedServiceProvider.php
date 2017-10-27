@@ -39,12 +39,18 @@ class S3PresignedServiceProvider extends ServiceProvider
             'version' => $configs['version']
             'credentials' => $credentials,
             'options' => [
-                $configs['options']
+                $configs['s3_client']['options']
             ]
         ]);
 
         $this->app->singleton('s3.presigned', function ($app) use ($s3Client, $configs) {
-            return new S3Presigned($s3Client, $configs['bucket'], $configs['prefix'], $configs)
+            return new S3Presigned(
+                $s3Client,
+                $configs['region'],
+                $configs['bucket'],
+                $configs['prefix'],
+                $configs['options']
+            );
         });
     }
 
@@ -55,7 +61,7 @@ class S3PresignedServiceProvider extends ServiceProvider
      */
     protected function bootConfig()
     {
-        $path = __DIR__.'/config/captcha.php';
+        $path = __DIR__ . '/config/captcha.php';
         $this->mergeConfigFrom($path, 's3_presigned');
         if (function_exists('config_path')) {
             $this->publishes([$path => config_path('s3_presigned.php')]);

@@ -9,6 +9,9 @@ return [
     'version' => env('AWS_VERSION', 'latest'),
     'bucket' => env('AWS_S3_BUCKET'),
     'prefix' => env('AWS_S3_PREFIX', ''),
+    's3_client' => [
+        'options' => []
+    ],
     'options' => [
         //
     ]

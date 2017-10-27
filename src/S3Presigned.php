@@ -9,15 +9,17 @@ use Unisharp\S3\Presigned\Exceptions\OptionsMissingException;
 class S3Presigned
 {
     protected $client;
+    protected $region;
     protected $options;
-    protected $requiredOptions = ['region'];
+    protected $requiredOptions = [];
     protected $baseUri;
     protected $prefix;
 
-    public function __construct(S3Client $client, $bucket, $prefix = '', array $options = [])
+    public function __construct(S3Client $client, $region, $bucket, $prefix = '', array $options = [])
     {
         $this->client = $client;
         $this->bucket = $bucket;
+        $this->region = $region;
         $this->options = $options;
         $this->checkOptions();
         $this->setBaseUri();
@@ -64,25 +66,30 @@ class S3Presigned
         ];
     }
 
-    public function listObjects()
+    public function listObjects($directory = '', $recursive = false)
     {
         // http://docs.aws.amazon.com/AmazonS3/latest/dev/ListingObjectKeysUsingPHP.html
         // http://docs.aws.amazon.com/aws-sdk-php/v3/api/api-s3-2006-03-01.html#listobjects
-        // https://github.com/thephpleague/flysystem-aws-s3-v3/blob/master/src/AwsS3Adapter.php
-        $resultPaginator = $this->client->getPaginator('ListObjects', [
+        $options = [
             'Bucket' => $this->getBucket(),
             'Prefix' => $this->getPrefix()
-        ]);
+        ];
+        if ($recursive === false) {
+            $options['Delimiter'] = '/';
+        }
+        $listing = $this->retrievePaginatedListing($options);
+        $normalized = array_map([$this, 'normalizeObject'], $listing);
+
+        return $normalized;
+    }
+
+    protected function retrievePaginatedListing(array $options)
+    {
+        $resultPaginator = $this->client->getPaginator('ListObjects', $options);
 
         $listing = [];
         foreach ($resultPaginator as $result) {
-            $objects = $result->get('Contents');
-            if (is_null($objects)) {
-                continue;
-            }
-            foreach ($objects as $object) {
-                $listing[] = $this->normalizeObject($object);
-            }
+            $listing = array_merge($result->get('Contents') ?: [], $result->get('CommonPrefixes') ?: []);
         }
 
         return $listing;
@@ -96,17 +103,17 @@ class S3Presigned
         ]);
     }
 
-    private function normalizeObject(array $object)
+    protected function normalizeObject(array $object)
     {
-        $normalized = [];
-        $normalized['key'] = $object['Key'] ?? '';
-        $normalized['url'] = $this->baseUri . $normalized['key'];
-        $normalized['size'] = $object['Size'] ?? '';
+        if (array_key_exists('LastModified', $object)) {
+            $object['Timestamp'] = strtotime($object['LastModified']);
+        }
+        $object['Url'] = $this->getBaseUri() . $object['Key'];
 
-        return $normalized;
+        return $object;
     }
 
-    private function getPostObject(array $defaults, array $options, $minutes = 10)
+    protected function getPostObject(array $defaults, array $options, $minutes = 10)
     {
         return new PostObjectV4(
             $this->getClient(),
@@ -117,7 +124,7 @@ class S3Presigned
         );
     }
 
-    public function checkOptions()
+    protected function checkOptions()
     {
         $missings = array_filter($this->requiredOptions, function ($value) {
             return !array_key_exists($value, $this->options);
@@ -130,8 +137,7 @@ class S3Presigned
 
     public function setBaseUri()
     {
-        $baseUri = "https://{$this->bucket}.s3-{$this->options['region']}.amazonaws.com/";
-        $this->baseUri = $baseUri;
+        $this->baseUri = "https://{$this->bucket}.s3-{$this->region}.amazonaws.com/";
 
         return $this;
     }
