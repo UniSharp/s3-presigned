@@ -29,21 +29,20 @@ class S3PresignedServiceProvider extends ServiceProvider
      */
     public function register()
     {
-        $configs = $this->configs;
-        $credentials = new Credentials(
-            $configs['credentials']['access_key'],
-            $configs['credentials']['secret_key'],
-        );
-        $s3Client = new S3Client([
-            'region'  => $configs['region'],
-            'version' => $configs['version']
-            'credentials' => $credentials,
-            'options' => [
-                $configs['s3_client']['options']
-            ]
-        ]);
-
-        $this->app->singleton('s3.presigned', function ($app) use ($s3Client, $configs) {
+        $this->app->singleton('s3.presigned', function ($app) {
+            $configs = $this->configs;
+            $credentials = new Credentials(
+                $configs['credentials']['access_key'],
+                $configs['credentials']['secret_key']
+            );
+            $s3Client = new S3Client([
+                'region'  => $configs['region'],
+                'version' => $configs['version'],
+                'credentials' => $credentials,
+                'options' => [
+                    $configs['s3_client']['options']
+                ]
+            ]);
             return new S3Presigned(
                 $s3Client,
                 $configs['region'],
@@ -61,7 +60,7 @@ class S3PresignedServiceProvider extends ServiceProvider
      */
     protected function bootConfig()
     {
-        $path = __DIR__ . '/config/captcha.php';
+        $path = __DIR__ . '/config/s3_presigned.php';
         $this->mergeConfigFrom($path, 's3_presigned');
         if (function_exists('config_path')) {
             $this->publishes([$path => config_path('s3_presigned.php')]);

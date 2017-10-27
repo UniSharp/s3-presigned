@@ -78,11 +78,10 @@ class PresignedTest extends TestCase
 
     public function testGetUploadForm()
     {
-        $filename = 'filename.extension';
         $policies = [];
         $defaults = ['foo' => 'bar'];
         $s3Presigned = $this->getS3Presigned();
-        $result = $s3Presigned->getUploadForm($filename, 10, $policies, $defaults);
+        $result = $s3Presigned->getUploadForm(10, $policies, $defaults);
         $this->assertArrayHasKey('endpoint', $result);
         $this->assertArrayHasKey('inputs', $result);
         $this->assertEquals($result['endpoint'], $s3Presigned->getBaseUri());
@@ -122,10 +121,6 @@ class PresignedTest extends TestCase
                     'ID' => 'owner_id',
                 ]
             ]));
-        $objects->shouldReceive('get')
-            ->once()
-            ->with('CommonPrefixes')
-            ->andReturn([]);
 
         return $objects;
     }

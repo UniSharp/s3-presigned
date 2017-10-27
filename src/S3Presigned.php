@@ -10,6 +10,7 @@ class S3Presigned
 {
     protected $client;
     protected $region;
+    protected $bucket;
     protected $options;
     protected $requiredOptions = [];
     protected $baseUri;
@@ -44,7 +45,7 @@ class S3Presigned
         return $guzzle ? $result : (string) $result;
     }
 
-    public function getUploadForm($key, $minutes = 10, array $policies = [], array $defaults = [])
+    public function getUploadForm($minutes = 10, array $policies = [], array $defaults = [])
     {
         // https://aws.amazon.com/tw/articles/browser-uploads-to-s3-using-html-post-forms/
         // http://docs.aws.amazon.com/AmazonS3/latest/API/sigv4-post-example.html
@@ -89,7 +90,7 @@ class S3Presigned
 
         $listing = [];
         foreach ($resultPaginator as $result) {
-            $listing = array_merge($result->get('Contents') ?: [], $result->get('CommonPrefixes') ?: []);
+            $listing = array_merge($listing, $result->get('Contents') ?: []);
         }
 
         return $listing;
