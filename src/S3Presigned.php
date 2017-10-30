@@ -58,7 +58,7 @@ class S3Presigned
             ['bucket' => $this->getBucket()],
             ['starts-with', '$key', $this->getPrefix()]
         ];
-        $policies = $policies ? array_merge($defaultPolicies, $defaults) : $defaultPolicies;
+        $policies = $policies ?: $defaultPolicies;
         $postObject = $this->getPostObject($defaults, $policies, $minutes);
 
         return [

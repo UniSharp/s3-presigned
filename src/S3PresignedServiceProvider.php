@@ -29,13 +29,14 @@ class S3PresignedServiceProvider extends ServiceProvider
      */
     public function register()
     {
-        $this->app->singleton('s3.presigned', function ($app) {
+        $this->app->singleton('s3.client', function ($app) {
             $configs = $this->configs;
             $credentials = new Credentials(
                 $configs['credentials']['access_key'],
                 $configs['credentials']['secret_key']
             );
-            $s3Client = new S3Client([
+
+            return new S3Client([
                 'region'  => $configs['region'],
                 'version' => $configs['version'],
                 'credentials' => $credentials,
@@ -43,13 +44,19 @@ class S3PresignedServiceProvider extends ServiceProvider
                     $configs['s3_client']['options']
                 ]
             ]);
-            return new S3Presigned(
-                $s3Client,
+        });
+
+        $this->app->singleton('s3.presigned', function ($app) {
+            $configs = $this->configs;
+            $s3Presigned = new S3Presigned(
+                $this->app['s3.client'],
                 $configs['region'],
                 $configs['bucket'],
                 $configs['prefix'],
                 $configs['options']
             );
+
+            return $s3Presigned;
         });
     }
 
