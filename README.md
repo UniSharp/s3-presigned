@@ -4,7 +4,7 @@ AWS S3 Presigned SDK
 [![packagist-badge](https://img.shields.io/packagist/v/unisharp/s3-presigned.svg)](https://packagist.org/packages/unisharp/s3-presigned)
 
 ## Purpose
-Traditionally to upload a file from users to a private S3 bucket needs two connections. One is from client to your own server, and the other is from your server to s3 bucket. Using pre-signed upload can solve this problem. Your server issuses pre-signed upload url for client to upload in advance, and the client can upload his file to s3 bucket directly. This package wraps pre-signed api for PHP and Laravel.
+Traditionally to upload a file from users to a private S3 bucket needs two internet connections. One is from client to your own server, and the other is from your server to S3 bucket. Using pre-signed upload can solve this problem. Your server issues pre-signed upload url for client to upload in advance, and the client can upload his file to S3 bucket directly within an authorized time period. This package wraps S3 pre-signed api for PHP and Laravel.
 
 ## Installation
 
@@ -44,7 +44,7 @@ AWS_VERSION=latest
 AWS_S3_PREFIX=
 ```
 
-## API
+## APIs
 
 ```php
 /*
