@@ -67,6 +67,8 @@ public function getUploadForm($minutes = 10, array $policies = [], array $defaul
 * $policies: see [AWS docs](http://docs.aws.amazon.com/AmazonS3/latest/API/sigv4-post-example.html) to find more.
 * $defaults: default key-values you want to add to form inputs.
 
+> for more detail, please see: [AWS docs](https://aws.amazon.com/tw/articles/browser-uploads-to-s3-using-html-post-forms)
+
 ```php
 /*
  * @return array
