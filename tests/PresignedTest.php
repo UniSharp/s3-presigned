@@ -68,7 +68,7 @@ class PresignedTest extends TestCase
     public function testGetSimpleUploadUrl()
     {
         $filename = 'filename.extension';
-        $host = 'bucket.s3-ap-northeast-1.amazonaws.com';
+        $host = 'bucket.s3.ap-northeast-1.amazonaws.com';
         $path = "/prefix/{$filename}";
         $s3Presigned = $this->getS3Presigned();
         $result = $s3Presigned->getSimpleUploadUrl($filename, 10, [], true);
